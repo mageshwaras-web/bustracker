@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bus Driver Tracker</title>
+</head>
+<body>
+
+<h2>Driver – Send Live Location</h2>
+
+<select id="bus">
+  <option value="Bus1">Bus 1</option>
+  <option value="Bus2">Bus 2</option>
+  <option value="Bus3">Bus 3</option>
+</select>
+
+<button onclick="startTracking()">Start Tracking</button>
+<p id="status">Waiting…</p>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAhhfTPO4tDvrDrdy9D4Af8c-fHwXiTsGM",
+  authDomain: "bustracker-caecf.firebaseapp.com",
+  databaseURL: "https://bustracker-caecf-default-rtdb.firebaseio.com",
+  projectId: "bustracker-caecf",
+  storageBucket: "bustracker-caecf.firebasestorage.app",
+  messagingSenderId: "559342508116",
+  appId: "1:559342508116:web:d85a945f580c51ea8e75c1",
+  measurementId: "G-QNLSZS1MYT"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let watchId = null;
+
+function startTracking() {
+  if (watchId !== null) {
+    alert("Tracking already started");
+    return;
+  }
+
+  const bus = document.getElementById("bus").value;
+
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      db.ref("busdata/" + bus).set({
+        lat: lat,
+        lng: lng,
+        updated: new Date().toLocaleTimeString()
+      });
+
+      document.getElementById("status").innerText =
+        "Sending: " + lat.toFixed(5) + ", " + lng.toFixed(5);
+    },
+    err => alert("Location error: " + err.message),
+    { enableHighAccuracy: true }
+  );
+}
+</script>
+
+</body>
+</html>

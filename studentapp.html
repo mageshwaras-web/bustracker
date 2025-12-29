@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Bus Tracker</title>
+  <style>
+    #map { height: 90vh; width: 100%; }
+  </style>
+</head>
+<body>
+
+<h3>Live Bus Tracking</h3>
+
+<select id="bus" onchange="loadBus()">
+  <option value="Bus1">Bus 1</option>
+  <option value="Bus2">Bus 2</option>
+  <option value="Bus3">Bus 3</option>
+</select>
+
+<div id="map"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAhhfTPO4tDvrDrdy9D4Af8c-fHwXiTsGM",
+  authDomain: "bustracker-caecf.firebaseapp.com",
+  databaseURL: "https://bustracker-caecf-default-rtdb.firebaseio.com",
+  projectId: "bustracker-caecf",
+  storageBucket: "bustracker-caecf.firebasestorage.app",
+  messagingSenderId: "559342508116",
+  appId: "1:559342508116:web:d85a945f580c51ea8e75c1",
+  measurementId: "G-QNLSZS1MYT"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let map, marker, listener;
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    zoom: 15,
+    center: { lat: 12.9716, lng: 77.5946 }
+  });
+
+  marker = new google.maps.Marker({
+    map: map,
+    title: "Bus Location"
+  });
+
+  loadBus();
+}
+
+function loadBus() {
+  const bus = document.getElementById("bus").value;
+  if (listener) listener.off();
+
+  listener = db.ref("busdata/" + bus);
+  listener.on("value", snap => {
+    if (snap.exists()) {
+      const d = snap.val();
+      const pos = { lat: d.lat, lng: d.lng };
+      marker.setPosition(pos);
+      map.setCenter(pos);
+    }
+  });
+}
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBOOKpyfFqyW1B37sEF0h19J6QteTDZfZM&callback=initMap">
+</script>
+
+</body>
+</html>
