@@ -1,22 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Bus Tracker</title>
-  <style>
-    #map { height: 90vh; width: 100%; }
-  </style>
+  <title>Bus Driver Tracker</title>
 </head>
 <body>
 
-<h3>Live Bus Tracking</h3>
+<h2>Driver – Send Live Location</h2>
 
-<select id="bus" onchange="loadBus()">
+<select id="bus">
   <option value="Bus1">Bus 1</option>
   <option value="Bus2">Bus 2</option>
   <option value="Bus3">Bus 3</option>
 </select>
 
-<div id="map"></div>
+<button onclick="startTracking()">Start Tracking</button>
+<p id="status">Waiting…</p>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -36,40 +34,34 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let map, marker, listener;
+let watchId = null;
 
-function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 15,
-    center: { lat: 12.9716, lng: 77.5946 }
-  });
+function startTracking() {
+  if (watchId !== null) {
+    alert("Tracking already started");
+    return;
+  }
 
-  marker = new google.maps.Marker({
-    map: map,
-    title: "Bus Location"
-  });
-
-  loadBus();
-}
-
-function loadBus() {
   const bus = document.getElementById("bus").value;
-  if (listener) listener.off();
 
-  listener = db.ref("busdata/" + bus);
-  listener.on("value", snap => {
-    if (snap.exists()) {
-      const d = snap.val();
-      const pos = { lat: d.lat, lng: d.lng };
-      marker.setPosition(pos);
-      map.setCenter(pos);
-    }
-  });
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      db.ref("busdata/" + bus).set({
+        lat: lat,
+        lng: lng,
+        updated: new Date().toLocaleTimeString()
+      });
+
+      document.getElementById("status").innerText =
+        "Sending: " + lat.toFixed(5) + ", " + lng.toFixed(5);
+    },
+    err => alert("Location error: " + err.message),
+    { enableHighAccuracy: true }
+  );
 }
-</script>
-
-<script async
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBOOKpyfFqyW1B37sEF0h19J6QteTDZfZM&callback=initMap">
 </script>
 
 </body>
