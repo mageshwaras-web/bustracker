@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pro Bus Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Modern UI Styling */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Floating Control Panel */
+    .overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      width: 250px;
+    }
+
+    h3 {
+      margin: 0 0 15px 0;
+      font-size: 18px;
+      color: #333;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-dot {
+      height: 8px;
+      width: 8px;
+      background-color: #4CAF50;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    select:focus {
+      border-color: #4285F4;
+    }
+
+    .info-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="overlay">
+  <h3><span class="status-dot"></span> Live Tracking</h3>
+  <label for="bus" style="font-size: 12px; font-weight: bold; color: #888;">SELECT ROUTE</label>
+  <select id="bus" onchange="loadBus()">
+    <option value="Bus1">Bus 01 - Downtown</option>
+    <option value="Bus2">Bus 02 - Airport Exp</option>
+    <option value="Bus3">Bus 03 - University</option>
+  </select>
+  <div class="info-text" id="coords">Waiting for GPS...</div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// --- CONFIGURATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAhhfTPO4tDvrDrdy9D4Af8c-fHwXiTsGM",
+  authDomain: "bustracker-caecf.firebaseapp.com",
+  databaseURL: "https://bustracker-caecf-default-rtdb.firebaseio.com",
+  projectId: "bustracker-caecf",
+  storageBucket: "bustracker-caecf.firebasestorage.app",
+  messagingSenderId: "559342508116",
+  appId: "1:559342508116:web:d85a945f580c51ea8e75c1"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let map, marker, listener;
+
+// Custom Bus Icon (You can replace URL with your own logo)
+const busIcon = {
+  url: "https://maps.google.com/mapfiles/kml/shapes/bus.png", // Standard Google Bus, or use a custom SVG
+  scaledSize: new google.maps.Size(40, 40),
+  origin: new google.maps.Point(0, 0),
+  anchor: new google.maps.Point(20, 20)
+};
+
+function initMap() {
+  // Center initially on a broad location
+  map = new google.maps.Map(document.getElementById("map"), {
+    zoom: 16,
+    center: { lat: 12.9716, lng: 77.5946 },
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    styles: [ // Minimalist "Silver" map style for high quality look
+      { "elementType": "geometry", "stylers": [{"color": "#f5f5f5"}]},
+      { "featureType": "poi", "stylers": [{"visibility": "off"}]},
+      { "featureType": "transit", "elementType": "line", "stylers": [{"visibility": "off"}]}
+    ]
+  });
+
+  marker = new google.maps.Marker({
+    map: map,
+    icon: busIcon,
+    title: "Current Bus Location",
+    optimized: false
+  });
+
+  loadBus();
+}
+
+function loadBus() {
+  const busId = document.getElementById("bus").value;
+  
+  // Clean up previous listener to prevent memory leaks
+  if (listener) db.ref("busdata").off();
+
+  listener = db.ref("busdata/" + busId);
+  listener.on("value", snap => {
+    if (snap.exists()) {
+      const data = snap.val();
+      const pos = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
+
+      // Update Marker and Smooth Pan
+      marker.setPosition(pos);
+      map.panTo(pos);
+      
+      // Update Text UI
+      document.getElementById("coords").innerText = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+    } else {
+      console.log("No data found for this bus.");
+      document.getElementById("coords").innerText = "Bus Offline";
+    }
+  });
+}
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBOOKpyfFqyW1B37sEF0h19J6QteTDZfZM&callback=initMap">
+</script>
+
+</body>
+</html>
